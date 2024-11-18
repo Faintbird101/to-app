@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Appearance } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons'; // Ensure this package is installed
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 
 // Enable animations on Android
 if (Platform.OS === 'android') {
@@ -30,6 +31,33 @@ const App = () => {
   const [isDarkMode, setIsDarkMode] = useState(Appearance.getColorScheme() === 'dark');
   const [isModalVisible, setIsModalVisible] = useState(false);
   
+  
+  // Load tasks from AsyncStorage on app start
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        const savedTasks = await AsyncStorage.getItem('tasks');
+        if (savedTasks) {
+          setTasks(JSON.parse(savedTasks)); // Parse the stored tasks
+        }
+      } catch (error) {
+        console.error('Error loading tasks from AsyncStorage:', error);
+      }
+    };
+    loadTasks();
+  }, []);
+
+  // Save tasks to AsyncStorage whenever they are updated
+  useEffect(() => {
+    const saveTasks = async () => {
+      try {
+        await AsyncStorage.setItem('tasks', JSON.stringify(tasks)); // Store tasks as a string
+      } catch (error) {
+        console.error('Error saving tasks to AsyncStorage:', error);
+      }
+    };
+    saveTasks();
+  }, [tasks]); // Trigger this effect whenever tasks change
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
