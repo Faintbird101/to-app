@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Appearance } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons'; // Ensure this package is installed
+import Icons from 'react-native-vector-icons/Ionicons'; // Ensure this package is installed
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 
 // Enable animations on Android
@@ -24,6 +25,7 @@ if (Platform.OS === 'android') {
 const App = () => {
   const [tasks, setTasks] = useState([]);
   const [task, setTask] = useState('');
+  const [description, setDescription] = useState(''); // New state for description
   const [editMode, setEditMode] = useState(false);
   const [editTaskId, setEditTaskId] = useState(null);
   const [filter, setFilter] = useState('all');
@@ -69,24 +71,26 @@ const App = () => {
     if (editMode) {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setTasks(
-        tasks.map((t) => (t.id === editTaskId ? { ...t, title: task } : t))
+        tasks.map((t) => (t.id === editTaskId ? { ...t, title: task, description: description } : t))
       );
       setEditMode(false);
       setEditTaskId(null);
     } else {
-      const newTask = { id: Math.random().toString(), title: task, completed: false };
+      const newTask = { id: Math.random().toString(), title: task, description, completed: false };
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setTasks([...tasks, newTask]);
     }
 
     setTask('');
+    setDescription(''); // Clear description after saving
     setIsModalVisible(false);
   };
 
-  const editTask = (id, title) => {
+  const editTask = (id, title, description) => {
     setEditMode(true);
     setEditTaskId(id);
     setTask(title);
+    setDescription(description); // Set the description when editing
     setIsModalVisible(true);
   };
 
@@ -164,38 +168,54 @@ const App = () => {
       </View>
 
       <FlatList
-        data={getFilteredTasks()}
-        renderItem={({ item }) => (
-          <View style={styles.taskContainer}>
-            <Text style={item.completed ? styles.completedTask : styles.task}>
-              {item.title}
-            </Text>
-            <View style={styles.actionButtons}>
-              {!item.completed && (
-                <TouchableOpacity
-                  style={styles.doneButton}
-                  onPress={() => markTaskComplete(item.id)}
-                >
-                  <Icon name="check" size={24} color="green" />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                style={styles.editButton}
-                onPress={() => editTask(item.id, item.title)}
-              >
-                <Icon name="edit" size={24} color="blue" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => deleteTask(item.id)}
-              >
-                <Icon name="delete" size={24} color="red" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        keyExtractor={(item) => item.id}
-      />
+  data={getFilteredTasks()}
+  renderItem={({ item }) => (
+    <View style={styles.taskContainer}>
+      {/* Leading Checkmark */}
+      <TouchableOpacity
+        style={styles.checkButton}
+        onPress={() => markTaskComplete(item.id)}
+        disabled={item.completed} // Disable if already completed
+      >
+        <Icons
+              name={item.completed ? 'checkmark-circle' : 'ellipse-outline'}
+              size={24}
+              color={item.completed ? '#28a745' : isDarkMode ? '#888' : '#333'}
+            />
+      </TouchableOpacity>
+
+      {/* Task Details */}
+      <View style={styles.taskDetails}>
+        <Text style={item.completed ? styles.completedTask : styles.task}>
+          {item.title}
+        </Text>
+        <Text style={item.completed ? styles.completedTask : styles.task}>
+          {item.description}
+        </Text>
+      </View>
+
+      {/* Trailing Edit and Delete Icons */}
+      <View style={styles.trailingButtons}>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => editTask(item.id, item.title, item.description)}
+        >
+          {/* <Icon name="edit" size={24} color="blue" /> */}
+          <Icons name="create-outline" size={20} color="#ffc107" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => deleteTask(item.id)}
+        >
+          {/* <Icon name="delete" size={24} color="red" /> */}
+          <Icons name="trash-outline" size={20} color="#dc3545" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  )}
+  keyExtractor={(item) => item.id}
+/>
+
 
       <TouchableOpacity
         style={styles.fab}
@@ -218,6 +238,13 @@ const App = () => {
               value={task}
               onChangeText={setTask}
             />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter task description"
+              placeholderTextColor={isDarkMode ? '#cccccc' : '#666666'}
+              value={description}
+              onChangeText={setDescription} // Handle description change
+            />
             <TouchableOpacity style={styles.modalButton} onPress={saveTask}>
               <Text style={styles.modalButtonText}>
                 {editMode ? 'Update Task' : 'Add Task'}
@@ -238,6 +265,47 @@ const App = () => {
 
 const createStyles = (isDarkMode) =>
   StyleSheet.create({
+    taskContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 8,
+      marginBottom: 16,
+      backgroundColor: isDarkMode ? '#333' : '#fff',
+      borderRadius: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 2,
+      elevation: 3,
+    },
+    checkButton: {
+      marginRight: 8,
+    },
+    taskDetails: {
+      flex: 1,
+      flexDirection: 'column',
+      marginRight: 8,
+    },
+    trailingButtons: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    task: {
+      fontSize: 16,
+      color: isDarkMode ? '#ffffff' : '#000000',
+    },
+    completedTask: {
+      fontSize: 16,
+      color: 'green',
+      textDecorationLine: 'line-through',
+    },
+    editButton: {
+      marginHorizontal: 8,
+    },
+    deleteButton: {
+      marginHorizontal: 8,
+    },
     container: {
       flex: 1,
       backgroundColor: isDarkMode ? '#121212' : '#ffffff',
